@@ -1,0 +1,50 @@
+LOCAL_PATH := $(call my-dir)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := busybox
+LOCAL_CATEGORY_PATH := system
+
+LOCAL_AUTOTOOLS_VERSION := 1.24.1
+LOCAL_AUTOTOOLS_ARCHIVE := $(LOCAL_MODULE)-$(LOCAL_AUTOTOOLS_VERSION).tar.bz2
+LOCAL_AUTOTOOLS_SUBDIR := $(LOCAL_MODULE)-$(LOCAL_AUTOTOOLS_VERSION)
+
+BUSYBOX_SRC_DIR := $(call local-get-build-dir)/$(LOCAL_AUTOTOOLS_SUBDIR)
+
+BUSYBOX_CONFIG_FILE := $(call module-get-config,$(LOCAL_MODULE))
+ifeq ("$(wildcard $(BUSYBOX_CONFIG_FILE))","")
+	BUSYBOX_CONFIG_FILE := $(LOCAL_PATH)/busybox.config
+endif
+
+LOCAL_AUTOTOOLS_MAKE_BUILD_ARGS := \
+	ARCH=$(TARGET_ARCH) \
+	CC="$(CCACHE) $(TARGET_CC)" \
+	CROSS_COMPILE="$(TARGET_CROSS)" \
+	CROSS="$(TARGET_CROSS)" \
+	CONFIG_PREFIX="$(TARGET_OUT_STAGING)" \
+	PREFIX="$(TARGET_OUT_STAGING)" \
+	CFLAGS="$(TARGET_GLOBAL_CFLAGS)" \
+	LDFLAGS="$(TARGET_GLOBAL_LDFLAGS)" \
+	V=$(V)
+
+LOCAL_AUTOTOOLS_MAKE_INSTALL_ARGS := $(LOCAL_AUTOTOOLS_MAKE_BUILD_ARGS)
+
+define LOCAL_AUTOTOOLS_CMD_CONFIGURE
+	$(Q) cp -pf $(BUSYBOX_CONFIG_FILE) $(BUSYBOX_SRC_DIR)/.config
+	$(Q) yes "" 2>/dev/null | $(MAKE) $(PRIVATE_MAKE_BUILD_ARGS) -C \
+		$(BUSYBOX_SRC_DIR) silentoldconfig
+endef
+
+define LOCAL_ARCHIVE_CMD_POST_UNPACK
+	@mkdir -p $(BUSYBOX_SRC_DIR)
+	@cp -af $(BUSYBOX_CONFIG_FILE) $(BUSYBOX_SRC_DIR)/.config
+endef
+
+# TODO works only if busybox has been built once before
+.PHONY: busybox-menuconfig
+busybox-menuconfig:
+	$(Q)$(MAKE) $(PRIVATE_MAKE_BUILD_ARGS) -C $(BUSYBOX_SRC_DIR) menuconfig
+	@cp -af $(BUSYBOX_SRC_DIR)/.config $(BUSYBOX_CONFIG_FILE)
+
+include $(BUILD_AUTOTOOLS)
+
