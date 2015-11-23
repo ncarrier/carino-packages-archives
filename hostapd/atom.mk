@@ -21,8 +21,18 @@ ifeq ("$(wildcard $(HOSTAPD_CONFIG_FILE))","")
 	HOSTAPD_CONFIG_FILE := $(LOCAL_PATH)/hostapd.config
 endif
 
+HOSTAPD_LIBNL_LDFLAGS := \
+	-Wl,--no-as-needed \
+	-lnl-3 -lnl-route-3 -lnl-genl-3 -lnl-nf-3 -lnl-cli-3 \
+	-Wl,--as-needed
+HOSTAPD_LIBNL_CFLAGS := \
+	-I$(TARGET_OUT_STAGING)/usr/include/libnl3
+
 define LOCAL_AUTOTOOLS_CMD_CONFIGURE
-	$(Q) cp -pf $(HOSTAPD_CONFIG_FILE) $(HOSTAPD_SRC_DIR)/hostapd/.config
+	$(Q) sed "s@#CFLAGS += -I$$<path to libnl .*@CFLAGS += $(HOSTAPD_LIBNL_CFLAGS)@g" \
+		$(HOSTAPD_CONFIG_FILE) $(HOSTAPD_SRC_DIR)/hostapd/.config | \
+		sed "s@#LIBS += -L$$<path to libnl .*@LIBS += $(HOSTAPD_LIBNL_LDFLAGS)@g" \
+		> $(HOSTAPD_SRC_DIR)/hostapd/.config
 endef
 
 define LOCAL_AUTOTOOLS_CMD_BUILD
