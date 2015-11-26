@@ -18,10 +18,14 @@ LOCAL_AUTOTOOLS_MAKE_INSTALL_ARGS := \
 
 LOCAL_EXPORT_LDLIBS := -lcrypto -lssl
 
+ifndef LIBCRYPTO_CONFIG_NAME
+$(error "LIBCRYPTO_CONFIG_NAME must be defined")
+endif
+
 define LOCAL_AUTOTOOLS_CMD_CONFIGURE
 	$(Q) (cd $(PRIVATE_SRC_DIR); TARGETMACH=$(TARGET_CROSS) \
 	./Configure \
-		linux-generic32 \
+		$(LIBCRYPTO_CONFIG_NAME) \
 		-DL_ENDIAN \
 		$(TARGET_GLOBAL_CFLAGS) shared \
 		--prefix=$(TARGET_OUT_STAGING)/usr)
